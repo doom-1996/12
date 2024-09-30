@@ -63,4 +63,4 @@ async def countdown_timer(seconds):
         print(f"{pth}please wait until {h}:{m}:{s} ", flush=True, end="\r")
         seconds -= 1
         await asyncio.sleep(1)
-    print(f"{pth}please wait until {h}:{m}:{00} ", flush=True, end="\r")
+    print(f"{pth}please wait until {h}:{m}:{s} ", flush=True, end="\r")
