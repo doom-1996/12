@@ -19,8 +19,8 @@ TON Blockchain just made a post specifically about $CLAY @ClaytonOnTon. This pro
 - **Multi-account Support:** Automate actions across multiple accounts.
 - **Proxy Support:** Automatically handle Account Request with Proxies.
 - **Complete Task** Automaticaly perform available Daily & Partner Task
+- **Play Game:** Automatically playing Stack & Tiles game
 - **Claim Achievements Reward** After completing quest bot achievements claim reward
-- **Play Game:** Automatically playing stack game (more game soon) 
 - **Configurable Settings:** Control various aspects of the script via a `config.json` file.
 
 ## Installation
