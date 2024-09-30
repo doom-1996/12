@@ -90,12 +90,12 @@ class GameSession:
     async def play_stack_game(self):
         st_url = f"{self.b_url}/api/stack/start-game"
         resp = self.scraper.post(st_url, headers=self.hdrs, json={})
-        if resp.status_code == 200:
+        if "no daily attempts left" in resp.text:
+            log(kng + f"Stack game: ticket attempts are over")
+            return None
+        elif resp.status_code == 200:
             self.s_id = resp.json().get("session_id")
             log(bru + f"Stack game: {hju}started{pth} {self.s_id}")
-        elif "no daily attempts left" in resp.text:
-            log(kng + f"Stack game: ticket attempts are over")
-            return
         else:
             error_message = resp.json().get('error', 'Unknown error')
             log(mrh + f"Stack game: start failed {pth}{error_message}")
@@ -128,7 +128,10 @@ class GameSession:
     async def play_tiles_game(self):
         start_url = f"{self.b_url}/api/game/start"
         resp = self.scraper.post(start_url, headers=self.hdrs, json={})
-        if resp.status_code == 200:
+        if "No game attempts available" in resp.text:
+            log(kng + f"Tiles game: ticket attempts are over")
+            return None
+        elif resp.status_code == 200:
             log(bru + f"Tiles game: {hju}started successfully")
         else:
             error_message = resp.json().get('error', 'Unknown error')
