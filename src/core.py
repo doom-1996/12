@@ -178,16 +178,24 @@ class GameSession:
             log(mrh + f"Unknown task type: {tsk_type}")
             return
 
-        await countdown_timer(random.randint(1, 2))
+        await countdown_timer(random.randint(3, 4))
+        
         for attempt in range(3):
             resp = self.scraper.get(t_url, headers=self.hdrs)
             if resp.status_code == 200:
-                tasks = resp.json()
+                if not resp.text:
+                    log(mrh + "Received empty response from the server.")
+                    return
+                try:
+                    tasks = resp.json()
+                except ValueError:
+                    log(mrh + f"Received non-JSON response: {resp.text}")
+                    return
                 break
             else:
                 log(mrh + f"Failed to retrieve {pth}{tsk_type} {mrh}tasks (Attempt {attempt + 1})")
                 await asyncio.sleep(1)
-                if attempt == 2: 
+                if attempt == 2:
                     return 
 
         for t in tasks:
@@ -197,7 +205,7 @@ class GameSession:
                 cmp_resp = self.scraper.post(cmp_url, headers=self.hdrs, json={"task_id": t_id})
                 if cmp_resp.status_code == 200:
                     log(hju + f"Completed {pth}{tsk_type}{hju} task: {pth}{t['task']['title']}")
-                    wait_time = max(random.randint(1, 3), 1)
+                    wait_time = max(random.randint(4, 6), 1)
                     await countdown_timer(wait_time)
                     clm_url = f"{self.b_url}/api/tasks/claim"
                     clm_resp = self.scraper.post(clm_url, headers=self.hdrs, json={"task_id": t_id})
@@ -207,10 +215,10 @@ class GameSession:
                         await countdown_timer(wait_time)
                     else:
                         error_message = clm_resp.json().get('error', 'Unknown error')
-                        log(mrh + f"Failed {pth}{t_id}: {error_message}")
+                        log(mrh + f"Failed to claim {pth}{t_id}: {error_message}")
                 else:
                     error_message = cmp_resp.json().get('error', 'Unknown error')
-                    log(mrh + f"Failed {pth}{t_id}: {error_message}")
+                    log(mrh + f"Failed to complete {pth}{t_id}: {error_message}")
             else:
                 log(hju + f"{tsk_type.capitalize()} {kng}task {pth}{t['task']['title']} {kng}already completed.")
 
