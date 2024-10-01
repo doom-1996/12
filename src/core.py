@@ -90,14 +90,18 @@ class GameSession:
     async def play_stack_game(self):
         st_url = f"{self.b_url}/api/stack/start-game"
         resp = self.scraper.post(st_url, headers=self.hdrs, json={})
+
         if "no daily attempts left" in resp.text:
             log(kng + f"Stack game: ticket attempts are over")
-            return None
+            return
         elif resp.status_code == 200:
             self.s_id = resp.json().get("session_id")
             log(bru + f"Stack game: {hju}started{pth} {self.s_id}")
         else:
-            error_message = resp.json().get('error', 'Unknown error')
+            try:
+                error_message = resp.json().get('error', 'Unknown error')
+            except ValueError:
+                error_message = 'Could not decode JSON response'
             log(mrh + f"Stack game: start failed {pth}{error_message}")
             return
 
@@ -106,6 +110,7 @@ class GameSession:
             self.c_score += self.inc
             up_url = f"{self.b_url}/api/stack/update-game"
             resp = self.scraper.post(up_url, headers=self.hdrs, json={"score": self.c_score})
+
             if resp.status_code == 200:
                 log(bru + f"Stack game - {hju}update score: {pth}{self.c_score}")
             else:
@@ -116,25 +121,36 @@ class GameSession:
         en_url = f"{self.b_url}/api/stack/end-game"
         payload = {"score": self.c_score, "multiplier": 1}
         resp = self.scraper.post(en_url, headers=self.hdrs, json=payload)
+
         if resp.status_code == 200:
-            res = resp.json()
-            log(hju + f"Stack game has ended successfully")
-            log(hju + f"XP Earned: {pth}{res['xp_earned']} {hju}| Points: {pth}{res['earn']}")
+            try:
+                res = resp.json()
+                log(hju + f"Stack game has ended successfully")
+                log(hju + f"XP Earned: {pth}{res['xp_earned']} {hju}| Points: {pth}{res['earn']}")
+            except ValueError:
+                log(mrh + f"End session failed: Could not decode JSON response")
             await countdown_timer(5)
         else:
-            error_message = resp.json().get('error', 'Unknown error')
+            try:
+                error_message = resp.json().get('error', 'Unknown error')
+            except ValueError:
+                error_message = 'Could not decode JSON response'
             log(mrh + f"End session failed: {htm}{error_message}")
 
     async def play_tiles_game(self):
         start_url = f"{self.b_url}/api/game/start"
         resp = self.scraper.post(start_url, headers=self.hdrs, json={})
+
         if "No game attempts available" in resp.text:
             log(kng + f"Tiles game: ticket attempts are over")
-            return None
+            return
         elif resp.status_code == 200:
             log(bru + f"Tiles game: {hju}started successfully")
         else:
-            error_message = resp.json().get('error', 'Unknown error')
+            try:
+                error_message = resp.json().get('error', 'Unknown error')
+            except ValueError:
+                error_message = 'Could not decode JSON response'
             log(mrh + f"Tiles game: failed to start {pth}{error_message}")
             return
 
@@ -145,24 +161,32 @@ class GameSession:
             save_url = f"{self.b_url}/api/game/save-tile"
             payload = {"maxTile": max_tile}
             resp = self.scraper.post(save_url, headers=self.hdrs, json=payload)
+
             if resp.status_code == 200:
                 log(bru + f"Tiles game - {hju}update score: {pth}{max_tile}")
                 max_tile *= 2
             else:
                 log(mrh + f"Tiles game - update failed!")
-            
+
             await countdown_timer(random.randint(5, 7))
 
         end_url = f"{self.b_url}/api/game/over"
         end_payload = {"multiplier": 1}
         resp = self.scraper.post(end_url, headers=self.hdrs, json=end_payload)
+
         if resp.status_code == 200:
-            res = resp.json()
-            log(hju + f"Tiles game has ended successfully")
-            log(hju + f"XP Earned: {pth}{res['xp_earned']} | Points: {pth}{res['earn']}")
+            try:
+                res = resp.json()
+                log(hju + f"Tiles game has ended successfully")
+                log(hju + f"XP Earned: {pth}{res['xp_earned']} | Points: {pth}{res['earn']}")
+            except ValueError:
+                log(mrh + f"End tiles game failed: Could not decode JSON response")
             await countdown_timer(5)
         else:
-            error_message = resp.json().get('error', 'Unknown error')
+            try:
+                error_message = resp.json().get('error', 'Unknown error')
+            except ValueError:
+                error_message = 'Could not decode JSON response'
             log(mrh + f"End tiles game failed: {pth}{error_message}")
 
     async def cpl_and_clm_tsk(self, tsk_type='daily'):
@@ -180,6 +204,7 @@ class GameSession:
 
         await countdown_timer(random.randint(3, 4))
         
+        tasks = [] 
         for attempt in range(3):
             resp = self.scraper.get(t_url, headers=self.hdrs)
             if resp.status_code == 200:
@@ -188,10 +213,10 @@ class GameSession:
                     return
                 try:
                     tasks = resp.json()
+                    break 
                 except ValueError:
                     log(mrh + f"Received non-JSON response: {resp.text}")
                     return
-                break
             else:
                 log(mrh + f"Failed to retrieve {pth}{tsk_type} {mrh}tasks (Attempt {attempt + 1})")
                 await asyncio.sleep(1)
@@ -210,15 +235,23 @@ class GameSession:
                     clm_url = f"{self.b_url}/api/tasks/claim"
                     clm_resp = self.scraper.post(clm_url, headers=self.hdrs, json={"task_id": t_id})
                     if clm_resp.status_code == 200:
-                        clm_data = clm_resp.json()
-                        log(hju + f"Claimed {pth}{t['task']['title']} {hju}Successfully | Reward: {pth}{clm_data.get('reward_tokens', '0')}")
-                        await countdown_timer(wait_time)
+                        try:
+                            clm_data = clm_resp.json()
+                            log(hju + f"Claimed {pth}{t['task']['title']} {hju}Successfully | Reward: {pth}{clm_data.get('reward_tokens', '0')}")
+                        except ValueError:
+                            log(mrh + f"Claim response is not valid JSON: {clm_resp.text}")
                     else:
-                        error_message = clm_resp.json().get('error', 'Unknown error')
+                        try:
+                            error_message = clm_resp.json().get('error', 'Unknown error')
+                        except ValueError:
+                            error_message = 'Could not decode JSON response'
                         log(mrh + f"Failed to claim {pth}{t_id}: {error_message}")
                 else:
-                    error_message = cmp_resp.json().get('error', 'Unknown error')
-                    log(mrh + f"Failed to complete {pth}{t_id}: {error_message}")
+                    try:
+                        error_message = cmp_resp.json().get('error', 'Unknown error')
+                    except ValueError:
+                        error_message = 'Could not decode JSON response'
+                    log(mrh + f"Failed! Task {pth}{t_id}: {error_message}")
             else:
                 log(hju + f"{tsk_type.capitalize()} {kng}task {pth}{t['task']['title']} {kng}already completed.")
 
